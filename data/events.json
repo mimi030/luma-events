@@ -1,1 +1,11 @@
-[]
+{
+  "events": [],
+  "debug_info": {
+    "scraped_at": "2025-08-19T23:34:31.756083",
+    "url": "https://lu.ma/mlto?period=past",
+    "status_code": 200,
+    "page_length": 188989,
+    "timeline_sections_found": 0,
+    "events_found": 0
+  }
+}
