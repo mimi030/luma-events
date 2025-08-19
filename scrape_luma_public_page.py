@@ -4,90 +4,73 @@ from bs4 import BeautifulSoup
 import json
 import time
 from datetime import datetime
+import os
 
 def scrape_luma_events():
-    url = "https://lu.ma/mlto"
-    headers = {'User-Agent': 'MLTO-EventBot/1.0 (volunteer@mlto.org)'}
+    # Scrape both upcoming and past events
+    urls = {
+        "past": "https://lu.ma/mlto?period=past",
+        "upcoming": "https://lu.ma/mlto"
+    }
     
-    try:
-        response = requests.get(url, headers=headers)
-        time.sleep(5)  # Respectful delay
-        
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        events = []
-        
-        # Look for event containers - inspect the page to find correct selectors
-        # Common Luma selectors (adjust based on actual HTML structure):
-        event_selectors = [
-            'div[data-testid="event-card"]',
-            '.event-card',
-            '.event-item',
-            'article',
-            '[class*="event"]'
-        ]
-        
-        for selector in event_selectors:
-            event_cards = soup.select(selector)
-            if event_cards:
-                print(f"Found {len(event_cards)} events with selector: {selector}")
-                break
-        
-        for event_card in event_cards:
-            # Extract event details - adjust selectors based on actual HTML
-            title_elem = (event_card.find('h1') or 
-                         event_card.find('h2') or 
-                         event_card.find('h3') or
-                         event_card.find('[class*="title"]') or
-                         event_card.find('[class*="name"]'))
+    headers = {'User-Agent': 'MLTO-EventBot/1.0 (volunteer@mlto.org)'}
+    all_events = []
+    
+    for period, url in urls.items():
+        try:
+            print(f"Fetching {period} events from {url}")
+            response = requests.get(url, headers=headers)
+            time.sleep(5)  # Respectful delay
             
-            date_elem = (event_card.find('[class*="date"]') or
-                        event_card.find('[class*="time"]') or
-                        event_card.find('time'))
+            if response.status_code != 200:
+                print(f"Failed to fetch {period} events: {response.status_code}")
+                continue
             
-            location_elem = (event_card.find('[class*="location"]') or
-                           event_card.find('[class*="venue"]') or
-                           event_card.find('[class*="address"]'))
+            soup = BeautifulSoup(response.content, 'html.parser')
             
-            link_elem = event_card.find('a')
+            # Try multiple selectors for Luma events
+            selectors = [
+                'a[href*="/e/"]',  # Event links
+                '[data-testid*="event"]',
+                '[class*="event"]'
+            ]
             
-            title = title_elem.get_text(strip=True) if title_elem else None
-            date = date_elem.get_text(strip=True) if date_elem else None
-            location = location_elem.get_text(strip=True) if location_elem else None
-            link = link_elem.get('href') if link_elem else None
+            events_found = 0
+            for selector in selectors:
+                elements = soup.select(selector)
+                if elements:
+                    print(f"Found {len(elements)} elements with {selector}")
+                    
+                    for elem in elements:
+                        title = elem.get_text(strip=True)
+                        link = elem.get('href')
+                        
+                        if title and link and '/e/' in link:
+                            all_events.append({
+                                "title": title,
+                                "url": f"https://lu.ma{link}" if not link.startswith('http') else link,
+                                "period": period,
+                                "scraped_at": datetime.now().isoformat()
+                            })
+                            events_found += 1
+                    
+                    if events_found > 0:
+                        break
             
-            if title:
-                # Determine if event is upcoming or past based on date or section
-                event_type = "unknown"
-                parent_section = event_card.find_parent(['section', 'div'])
-                if parent_section:
-                    section_text = parent_section.get_text().lower()
-                    if 'upcoming' in section_text or 'future' in section_text:
-                        event_type = "upcoming"
-                    elif 'past' in section_text or 'previous' in section_text:
-                        event_type = "past"
-                
-                events.append({
-                    "title": title,
-                    "date": date,
-                    "location": location,
-                    "url": f"https://lu.ma{link}" if link and not link.startswith('http') else link,
-                    "type": event_type,
-                    "scraped_at": datetime.now().isoformat()
-                })
-        
-        # Save to JSON file
-        with open('data/events.json', 'w', encoding='utf-8') as f:
-            json.dump(events, f, indent=2, ensure_ascii=False)
-        
-        print(f"Scraped {len(events)} events from MLTO")
-        
-        # Print sample for debugging
-        if events:
-            print("Sample event:", events[0])
-        
-    except Exception as e:
-        print(f"Error scraping: {e}")
+            print(f"Scraped {events_found} {period} events")
+            
+        except Exception as e:
+            print(f"Error scraping {period} events: {e}")
+    
+    # Create data directory
+    os.makedirs('data', exist_ok=True)
+    
+    # Save to JSON
+    with open('data/events.json', 'w', encoding='utf-8') as f:
+        json.dump(all_events, f, indent=2, ensure_ascii=False)
+    
+    print(f"Total events scraped: {len(all_events)}")
+    return len(all_events)
 
 if __name__ == "__main__":
     scrape_luma_events()
