@@ -30,13 +30,13 @@ jobs:
       
     - name: Scrape events
       run: |
-        cd FeaturesTesting/fetch_luma_past_events/public_page_scraping_soup
-        python scrape_luma_events.py
-      
+        python scrape_luma_public_page.py
+      working-directory: ./
+    
     - name: Commit and push changes
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add FeaturesTesting/fetch_luma_past_events/public_page_scraping_soup/data/events.json
+        git add data/events.json
         git diff --staged --quiet || git commit -m "Update MLTO events data"
         git push
