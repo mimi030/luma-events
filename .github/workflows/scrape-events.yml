@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: Scrape Luma Events
 
 on:
@@ -10,19 +7,19 @@ on:
 
 jobs:
   scrape:
-
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11"]
-
+    permissions:
+      contents: write  # Required for pushing changes
+    
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.11"
 
     - name: Install dependencies
       run: |
@@ -31,12 +28,13 @@ jobs:
     - name: Scrape events
       run: |
         python scrape_luma_public_page.py
-      working-directory: ./
     
     - name: Commit and push changes
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --global user.name "github-actions"
+        git config --global user.email "actions@github.com"
         git add data/events.json
-        git diff --staged --quiet || git commit -m "Update MLTO events data"
+        git commit -m "Update events.json" || echo "No changes to commit"
         git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
