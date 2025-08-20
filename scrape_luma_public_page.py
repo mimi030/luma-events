@@ -1,6 +1,10 @@
 # scrape_luma_public_page.py
-import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import json
 import time
 from datetime import datetime
@@ -8,140 +12,133 @@ import os
 
 def scrape_luma_events():
     url = "https://lu.ma/mlto?period=past"
-    headers = {'User-Agent': 'MLTO-EventBot/1.0 (volunteer@mlto.org)'}
+    
+    # Setup headless Chrome for GitHub Actions
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--user-agent=MLTO-EventBot/1.0 (volunteer@mlto.org)")
     
     try:
-        print(f"Fetching events from {url}")
-        response = requests.get(url, headers=headers)
-        time.sleep(5)  # Respectful delay
+        # Use system chromium-chromedriver
+        service = Service('/usr/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         
-        if response.status_code != 200:
-            print(f"Failed to fetch events: {response.status_code}")
-            return 0
+        print(f"Loading page: {url}")
+        driver.get(url)
         
-        soup = BeautifulSoup(response.content, 'html.parser')
+        # Wait for page to load and events to appear
+        print("Waiting for events to load...")
+        WebDriverWait(driver, 15).until(
+            lambda d: len(d.find_elements(By.TAG_NAME, "h3")) > 0
+        )
         
-        # Debug: Print page info
-        print(f"Page title: {soup.title.string if soup.title else 'No title'}")
-        print(f"Page content length: {len(response.text)}")
-        
-        # Debug: Look for any timeline sections
-        timeline_sections = soup.find_all('div', class_='jsx-797115727 timeline-section')
-        print(f"Found {len(timeline_sections)} timeline sections")
-        
-        # Debug: Look for any event-related elements
-        event_links = soup.find_all('a', href=True)
-        event_count = 0
-        for link in event_links:
-            if '/e/' in link.get('href', '') or 'event' in link.get('class', []):
-                event_count += 1
-        print(f"Found {event_count} potential event links")
-        
-        # Debug: Look for common class patterns
-        jsx_elements = soup.find_all('div', class_=lambda x: x and 'jsx-' in str(x))
-        print(f"Found {len(jsx_elements)} JSX elements")
+        time.sleep(5)  # Additional wait for dynamic content
         
         events = []
         
-        # Try alternative selectors if timeline sections not found
-        if not timeline_sections:
-            print("No timeline sections found, trying alternative selectors...")
-            
-            # Try to find any event cards with different selectors
-            alternative_selectors = [
-                'div[class*="content-card"]',
-                'div[class*="event"]',
-                'a[href*="/e/"]',
-                'h3',
-                '[aria-label*="event" i]'
-            ]
-            
-            for selector in alternative_selectors:
-                elements = soup.select(selector)
-                print(f"Selector '{selector}': found {len(elements)} elements")
-                
-                if elements and len(elements) > 0:
-                    for elem in elements[:3]:  # Show first 3
-                        text = elem.get_text(strip=True)[:100]
-                        print(f"  Sample: {text}")
+        # Find all h3 elements (event titles)
+        h3_elements = driver.find_elements(By.TAG_NAME, "h3")
+        print(f"Found {len(h3_elements)} h3 elements")
         
-        # Original scraping logic
-        for section in timeline_sections:
-            date_elem = section.find('div', class_='jsx-3191908726 date')
-            date = date_elem.get_text(strip=True) if date_elem else None
+        for h3 in h3_elements:
+            title = h3.text.strip()
             
-            event_cards = section.find_all('div', class_='jsx-702bb7b3285aa34f jsx-1544432796 content-card')
-            
-            for card in event_cards:
-                title_elem = card.find('h3', class_='jsx-3672995585')
-                title = title_elem.get_text(strip=True) if title_elem else None
+            # Filter for actual event titles (longer than 10 chars, contains meaningful words)
+            if (title and len(title) > 10 and 
+                any(word in title.lower() for word in ['mlto', 'machine', 'learning', 'toronto', 'tech', 'ai', 'supercollider', 'cohere'])):
                 
-                link_elem = card.find('a', class_='event-link content-link')
-                link = link_elem.get('href') if link_elem else None
-                
-                time_elem = card.find('span', class_='jsx-1305897383')
-                event_time = time_elem.get_text(strip=True) if time_elem else None
-                
-                location_elem = card.find('div', class_='jsx-e74804ac03b83871 text-ellipses')
-                location = None
-                if location_elem:
-                    location_divs = card.find_all('div', class_='jsx-e74804ac03b83871 text-ellipses')
-                    for div in location_divs:
-                        text = div.get_text(strip=True)
-                        if 'By ' not in text and len(text) > 3:
-                            location = text
-                            break
-                
-                if title and link:
+                try:
+                    # Find parent container to get more details
+                    parent = h3.find_element(By.XPATH, "./ancestor::div[contains(@class, 'content-card') or contains(@class, 'card-wrapper')]")
+                    
+                    # Look for event link
+                    link = None
+                    try:
+                        link_elem = parent.find_element(By.CSS_SELECTOR, "a[href*='/']")
+                        href = link_elem.get_attribute('href')
+                        if href and ('/e/' in href or 'lu.ma' in href):
+                            link = href if href.startswith('http') else f"https://lu.ma{href}"
+                    except:
+                        pass
+                    
+                    # Look for time
+                    event_time = None
+                    try:
+                        time_elem = parent.find_element(By.CSS_SELECTOR, "span")
+                        time_text = time_elem.text.strip()
+                        if ':' in time_text and len(time_text) < 10:
+                            event_time = time_text
+                    except:
+                        pass
+                    
+                    # Look for location
+                    location = None
+                    try:
+                        # Find all text elements and look for venue names
+                        text_elements = parent.find_elements(By.CSS_SELECTOR, "div")
+                        for elem in text_elements:
+                            text = elem.text.strip()
+                            if (text and 'By ' not in text and 
+                                any(venue in text for venue in ['Brewery', 'Bar', 'Exchange', 'Centre', 'Hall', 'Club'])):
+                                location = text
+                                break
+                    except:
+                        pass
+                    
                     events.append({
                         "title": title,
-                        "date": date,
                         "time": event_time,
                         "location": location,
-                        "url": f"https://lu.ma{link}",
+                        "url": link,
                         "scraped_at": datetime.now().isoformat()
                     })
+                    
+                    print(f"Found event: {title}")
+                    
+                except Exception as e:
+                    print(f"Error processing event '{title}': {e}")
+                    continue
         
-        # Always create the file, even if empty
+        driver.quit()
+        
+        # Save results
         os.makedirs('data', exist_ok=True)
         
-        # Add debug info to JSON
         result = {
             "events": events,
             "debug_info": {
                 "scraped_at": datetime.now().isoformat(),
                 "url": url,
-                "status_code": response.status_code,
-                "page_length": len(response.text),
-                "timeline_sections_found": len(timeline_sections),
-                "events_found": len(events)
+                "events_found": len(events),
+                "method": "selenium_automated"
             }
         }
         
         with open('data/events.json', 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        print(f"Scraped {len(events)} events and saved to data/events.json")
+        print(f"Successfully scraped {len(events)} events")
         
-        if events:
-            for i, event in enumerate(events[:3]):
-                print(f"Event {i+1}: {event['title']} - {event['date']}")
-        else:
-            print("No events found - check debug_info in JSON file")
+        for event in events:
+            print(f"- {event['title']}")
         
         return len(events)
         
     except Exception as e:
-        print(f"Error scraping: {e}")
+        print(f"Error during scraping: {e}")
         import traceback
         traceback.print_exc()
         
         # Create error file
         os.makedirs('data', exist_ok=True)
         error_info = {
+            "events": [],
             "error": str(e),
-            "scraped_at": datetime.now().isoformat(),
-            "events": []
+            "scraped_at": datetime.now().isoformat()
         }
         with open('data/events.json', 'w', encoding='utf-8') as f:
             json.dump(error_info, f, indent=2, ensure_ascii=False)
