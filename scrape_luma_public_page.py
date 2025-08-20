@@ -9,6 +9,45 @@ import json
 import time
 from datetime import datetime
 import os
+import re
+
+def get_attendee_count(driver, event_url):
+    """Visit individual event page to get attendee count"""
+    try:
+        print(f"  Getting attendee count from: {event_url}")
+        driver.get(event_url)
+        
+        # Wait for page to load
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        time.sleep(2)
+        
+        # Look for "XX Went" text
+        went_selectors = [
+            "div[class*='title-label']:contains('Went')",
+            "div:contains('Went')",
+            "*[class*='card-title'] *:contains('Went')"
+        ]
+        
+        # Try to find "XX Went" text
+        all_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Went')]")
+        
+        for elem in all_elements:
+            text = elem.text.strip()
+            # Look for pattern like "83 Went", "156 Went", etc.
+            match = re.search(r'(\d+)\s+Went', text)
+            if match:
+                count = int(match.group(1))
+                print(f"    Found attendee count: {count}")
+                return count
+        
+        print("    No attendee count found")
+        return None
+        
+    except Exception as e:
+        print(f"    Error getting attendee count: {e}")
+        return None
 
 def scrape_luma_events():
     url = "https://lu.ma/mlto?period=past"
@@ -47,7 +86,7 @@ def scrape_luma_events():
         for h3 in h3_elements:
             title = h3.text.strip()
             
-            # Filter for actual event titles (longer than 10 chars, contains meaningful words)
+            # Filter for actual event titles
             if (title and len(title) > 10 and 
                 any(word in title.lower() for word in ['mlto', 'machine', 'learning', 'toronto', 'tech', 'ai', 'supercollider', 'cohere'])):
                 
@@ -78,7 +117,6 @@ def scrape_luma_events():
                     # Look for location
                     location = None
                     try:
-                        # Find all text elements and look for venue names
                         text_elements = parent.find_elements(By.CSS_SELECTOR, "div")
                         for elem in text_elements:
                             text = elem.text.strip()
@@ -89,15 +127,22 @@ def scrape_luma_events():
                     except:
                         pass
                     
+                    # Get attendee count from individual event page
+                    attendee_count = None
+                    if link:
+                        attendee_count = get_attendee_count(driver, link)
+                        time.sleep(3)  # Respectful delay between requests
+                    
                     events.append({
                         "title": title,
                         "time": event_time,
                         "location": location,
                         "url": link,
+                        "attendee_count": attendee_count,
                         "scraped_at": datetime.now().isoformat()
                     })
                     
-                    print(f"Found event: {title}")
+                    print(f"Found event: {title} ({attendee_count} attendees)")
                     
                 except Exception as e:
                     print(f"Error processing event '{title}': {e}")
@@ -114,17 +159,18 @@ def scrape_luma_events():
                 "scraped_at": datetime.now().isoformat(),
                 "url": url,
                 "events_found": len(events),
-                "method": "selenium_automated"
+                "method": "selenium_with_attendee_counts"
             }
         }
         
         with open('data/events.json', 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        print(f"Successfully scraped {len(events)} events")
+        print(f"Successfully scraped {len(events)} events with attendee counts")
         
         for event in events:
-            print(f"- {event['title']}")
+            attendee_info = f" ({event['attendee_count']} attendees)" if event['attendee_count'] else ""
+            print(f"- {event['title']}{attendee_info}")
         
         return len(events)
         
