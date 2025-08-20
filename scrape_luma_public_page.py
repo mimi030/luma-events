@@ -5,48 +5,87 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 import json
 import time
 from datetime import datetime
 import os
 import re
 
-def get_attendee_count(driver, event_url):
-    """Visit individual event page to get attendee count"""
+def get_attendee_count(driver, event_link_element):
+    """Click event link and get attendee count from event page"""
     try:
-        print(f"  Getting attendee count from: {event_url}")
-        driver.get(event_url)
+        # Get the current window handle
+        main_window = driver.current_window_handle
         
-        # Wait for page to load
+        # Click the event link to open in new tab
+        ActionChains(driver).key_down(Keys.CONTROL).click(event_link_element).key_up(Keys.CONTROL).perform()
+        
+        # Wait for new tab and switch to it
+        WebDriverWait(driver, 5).until(lambda d: len(d.window_handles) > 1)
+        
+        for handle in driver.window_handles:
+            if handle != main_window:
+                driver.switch_to.window(handle)
+                break
+        
+        # Wait for event page to load
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
-        time.sleep(2)
+        time.sleep(3)
         
-        # Look for "XX Went" text
+        # Look for "XX Went" text with multiple strategies
+        attendee_count = None
+        
+        # Strategy 1: Look for specific class patterns
         went_selectors = [
-            "div[class*='title-label']:contains('Went')",
+            "[class*='title-label']",
+            "[class*='card-title']", 
             "div:contains('Went')",
-            "*[class*='card-title'] *:contains('Went')"
+            "*[class*='stat']"
         ]
         
-        # Try to find "XX Went" text
-        all_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Went')]")
+        # Strategy 2: Search all text for "Went" pattern
+        try:
+            page_text = driver.page_source
+            went_matches = re.findall(r'(\d+)\s+Went', page_text, re.IGNORECASE)
+            if went_matches:
+                attendee_count = int(went_matches[0])
+                print(f"    Found attendee count: {attendee_count}")
+        except:
+            pass
         
-        for elem in all_elements:
-            text = elem.text.strip()
-            # Look for pattern like "83 Went", "156 Went", etc.
-            match = re.search(r'(\d+)\s+Went', text)
-            if match:
-                count = int(match.group(1))
-                print(f"    Found attendee count: {count}")
-                return count
+        # Strategy 3: Look through all elements containing "Went"
+        if not attendee_count:
+            try:
+                went_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Went') or contains(text(), 'went')]")
+                for elem in went_elements:
+                    text = elem.text.strip()
+                    match = re.search(r'(\d+)\s+[Ww]ent', text)
+                    if match:
+                        attendee_count = int(match.group(1))
+                        print(f"    Found attendee count: {attendee_count}")
+                        break
+            except:
+                pass
         
-        print("    No attendee count found")
-        return None
+        if not attendee_count:
+            print("    No attendee count found (event may be upcoming or private)")
+        
+        # Close the event tab and return to main window
+        driver.close()
+        driver.switch_to.window(main_window)
+        
+        return attendee_count
         
     except Exception as e:
         print(f"    Error getting attendee count: {e}")
+        # Make sure we're back on main window
+        try:
+            driver.switch_to.window(main_window)
+        except:
+            pass
         return None
 
 def scrape_luma_events():
@@ -94,13 +133,14 @@ def scrape_luma_events():
                     # Find parent container to get more details
                     parent = h3.find_element(By.XPATH, "./ancestor::div[contains(@class, 'content-card') or contains(@class, 'card-wrapper')]")
                     
-                    # Look for event link
-                    link = None
+                    # Look for event link element (for clicking)
+                    link_element = None
+                    link_url = None
                     try:
-                        link_elem = parent.find_element(By.CSS_SELECTOR, "a[href*='/']")
-                        href = link_elem.get_attribute('href')
+                        link_element = parent.find_element(By.CSS_SELECTOR, "a[href*='/']")
+                        href = link_element.get_attribute('href')
                         if href and ('/e/' in href or 'lu.ma' in href):
-                            link = href if href.startswith('http') else f"https://lu.ma{href}"
+                            link_url = href if href.startswith('http') else f"https://lu.ma{href}"
                     except:
                         pass
                     
@@ -127,22 +167,24 @@ def scrape_luma_events():
                     except:
                         pass
                     
-                    # Get attendee count from individual event page
+                    # Get attendee count by clicking the event link
                     attendee_count = None
-                    if link:
-                        attendee_count = get_attendee_count(driver, link)
-                        time.sleep(3)  # Respectful delay between requests
+                    if link_element and link_url:
+                        print(f"  Getting attendee count for: {title}")
+                        attendee_count = get_attendee_count(driver, link_element)
+                        time.sleep(2)  # Respectful delay
                     
                     events.append({
                         "title": title,
                         "time": event_time,
                         "location": location,
-                        "url": link,
+                        "url": link_url,
                         "attendee_count": attendee_count,
                         "scraped_at": datetime.now().isoformat()
                     })
                     
-                    print(f"Found event: {title} ({attendee_count} attendees)")
+                    attendee_info = f" ({attendee_count} attendees)" if attendee_count else " (no attendee data)"
+                    print(f"Found event: {title}{attendee_info}")
                     
                 except Exception as e:
                     print(f"Error processing event '{title}': {e}")
@@ -159,18 +201,17 @@ def scrape_luma_events():
                 "scraped_at": datetime.now().isoformat(),
                 "url": url,
                 "events_found": len(events),
-                "method": "selenium_with_attendee_counts"
+                "events_with_attendee_count": len([e for e in events if e['attendee_count']]),
+                "method": "selenium_with_click_navigation"
             }
         }
         
         with open('data/events.json', 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
         
-        print(f"Successfully scraped {len(events)} events with attendee counts")
-        
-        for event in events:
-            attendee_info = f" ({event['attendee_count']} attendees)" if event['attendee_count'] else ""
-            print(f"- {event['title']}{attendee_info}")
+        print(f"Successfully scraped {len(events)} events")
+        events_with_counts = len([e for e in events if e['attendee_count']])
+        print(f"Found attendee counts for {events_with_counts} events")
         
         return len(events)
         
