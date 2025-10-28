@@ -1,45 +1,52 @@
 {
   "events": [
     {
+      "title": "Machine Learning Toronto (MLTO) - September 2025",
+      "time": "6:00 PM",
+      "location": null,
+      "url": null,
+      "scraped_at": "2025-10-28T01:11:43.580078"
+    },
+    {
       "title": "Machine Learning Toronto (MLTO) - August 2025",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2025-10-01T01:39:21.948677"
+      "scraped_at": "2025-10-28T01:11:44.103916"
     },
     {
       "title": "MLTO: Machine Learning Toronto - July 2025",
       "time": "6:00 PM",
       "location": "Left Field Brewery (Liberty Village)",
       "url": null,
-      "scraped_at": "2025-10-01T01:39:22.294132"
+      "scraped_at": "2025-10-28T01:11:44.395477"
     },
     {
       "title": "SUPERCOLLIDER: TORONTO TECH WEEK AFTERPARTY",
       "time": "8:00 PM",
       "location": "GRETA Bar YYZ",
       "url": null,
-      "scraped_at": "2025-10-01T01:39:22.614725"
+      "scraped_at": "2025-10-28T01:11:44.677446"
     },
     {
       "title": "MLTO: Machine Learning Toronto - June 2025",
       "time": "6:00 PM",
       "location": "Left Field Brewery (Liberty Village)",
       "url": null,
-      "scraped_at": "2025-10-01T01:39:22.972029"
+      "scraped_at": "2025-10-28T01:11:44.976262"
     },
     {
       "title": "Scaling ML in Enterprises: An Evening with Cohere hosted by Index Exchange",
       "time": "6:00 PM",
       "location": "Scaling ML in Enterprises: An Evening with Cohere hosted by Index Exchange",
       "url": null,
-      "scraped_at": "2025-10-01T01:39:23.112991"
+      "scraped_at": "2025-10-28T01:11:45.099914"
     }
   ],
   "debug_info": {
-    "scraped_at": "2025-10-01T01:39:23.185227",
+    "scraped_at": "2025-10-28T01:11:45.168680",
     "url": "https://lu.ma/mlto?period=past",
-    "events_found": 5,
+    "events_found": 6,
     "method": "selenium_automated"
   }
 }
