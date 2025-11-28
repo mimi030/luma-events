@@ -5,53 +5,53 @@
       "time": "5:30 PM",
       "location": "Index Exchange",
       "url": null,
-      "scraped_at": "2025-11-01T01:38:44.839784"
+      "scraped_at": "2025-11-28T01:13:33.709943"
     },
     {
       "title": "Machine Learning Toronto (MLTO) - September 2025",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2025-11-01T01:38:45.324537"
+      "scraped_at": "2025-11-28T01:13:34.205321"
     },
     {
       "title": "Machine Learning Toronto (MLTO) - August 2025",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2025-11-01T01:38:45.829536"
+      "scraped_at": "2025-11-28T01:13:34.743519"
     },
     {
       "title": "MLTO: Machine Learning Toronto - July 2025",
       "time": "6:00 PM",
       "location": "Left Field Brewery (Liberty Village)",
       "url": null,
-      "scraped_at": "2025-11-01T01:38:46.144976"
+      "scraped_at": "2025-11-28T01:13:35.037784"
     },
     {
       "title": "SUPERCOLLIDER: TORONTO TECH WEEK AFTERPARTY",
       "time": "8:00 PM",
       "location": "GRETA Bar YYZ",
       "url": null,
-      "scraped_at": "2025-11-01T01:38:46.419136"
+      "scraped_at": "2025-11-28T01:13:35.329256"
     },
     {
       "title": "MLTO: Machine Learning Toronto - June 2025",
       "time": "6:00 PM",
       "location": "Left Field Brewery (Liberty Village)",
       "url": null,
-      "scraped_at": "2025-11-01T01:38:46.715002"
+      "scraped_at": "2025-11-28T01:13:35.627737"
     },
     {
       "title": "Scaling ML in Enterprises: An Evening with Cohere hosted by Index Exchange",
       "time": "6:00 PM",
       "location": "Scaling ML in Enterprises: An Evening with Cohere hosted by Index Exchange",
       "url": null,
-      "scraped_at": "2025-11-01T01:38:46.832113"
+      "scraped_at": "2025-11-28T01:13:35.758786"
     }
   ],
   "debug_info": {
-    "scraped_at": "2025-11-01T01:38:46.900660",
+    "scraped_at": "2025-11-28T01:13:35.827155",
     "url": "https://lu.ma/mlto?period=past",
     "events_found": 7,
     "method": "selenium_automated"
