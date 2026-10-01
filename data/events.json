@@ -5,25 +5,25 @@
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2026-09-28T03:16:56.743234"
+      "scraped_at": "2026-10-01T04:23:59.858762"
     },
     {
       "title": "Machine Learning Toronto (MLTO) - April 2026",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2026-09-28T03:16:57.141995"
+      "scraped_at": "2026-10-01T04:24:00.368007"
     },
     {
       "title": "MLTO Vibin' Volunteer Info Session",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2026-09-28T03:16:57.513838"
+      "scraped_at": "2026-10-01T04:24:00.876889"
     }
   ],
   "debug_info": {
-    "scraped_at": "2026-09-28T03:16:57.593086",
+    "scraped_at": "2026-10-01T04:24:00.954024",
     "url": "https://lu.ma/mlto?period=past",
     "events_found": 3,
     "method": "selenium_automated"
