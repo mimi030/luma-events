@@ -5,25 +5,25 @@
       "time": "6:00 PM",
       "location": "Data Drinks x MLTO: Hallowe’en Pub Night",
       "url": null,
-      "scraped_at": "2026-10-28T03:43:24.920458"
+      "scraped_at": "2026-11-01T04:40:06.031912"
     },
     {
       "title": "Machine Learning Toronto - MLTO Q4 2026",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2026-10-28T03:43:25.462693"
+      "scraped_at": "2026-11-01T04:40:06.561508"
     },
     {
       "title": "Machine Learning Toronto (MLTO) - April 2026",
       "time": "6:00 PM",
       "location": null,
       "url": null,
-      "scraped_at": "2026-10-28T03:43:25.976470"
+      "scraped_at": "2026-11-01T04:40:07.092481"
     }
   ],
   "debug_info": {
-    "scraped_at": "2026-10-28T03:43:26.040695",
+    "scraped_at": "2026-11-01T04:40:07.166218",
     "url": "https://lu.ma/mlto?period=past",
     "events_found": 3,
     "method": "selenium_automated"
